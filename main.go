@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
+
+	"encoding/base64"
 
 	"github.com/gin-gonic/gin"
 
@@ -30,6 +33,15 @@ func main() {
 	router := gin.Default()
 	router.Use(gin.Recovery())
 
+	cookieStoreKey, _ := base64.StdEncoding.DecodeString(`NpEPi8pEjKVjLGJ6kYCS+VTCzi6BUuDzU0wrwXyf5uDPArtlofn2AG6aTMiPmN3C909rsEWMNqJqhIVPGP3Exg==`)
+	sessionStoreKey, _ := base64.StdEncoding.DecodeString(`AbfYwmmt8UCwUuhd9qvfNA9UCuN1cVcKJN1ofbiky6xCyyBj20whe40rJa3Su0WOWLWcPpO1taqJdsEI/65+JA==`)
+	cookieStore = abclientstate.NewCookieStorer(cookieStoreKey, nil)
+	cookieStore.HTTPOnly = false
+	cookieStore.Secure = false
+	sessionStore = abclientstate.NewSessionStorer("test", sessionStoreKey, nil)
+	cstore := sessionStore.Store.(*sessions.CookieStore)
+	cstore.Options.HttpOnly = false
+	cstore.Options.Secure = false
 	// Setting up Authboss
 	ab := initAuthBossParam()
 	// Set up LoadClientStateMiddleware, required by the auth module
@@ -73,8 +85,8 @@ func initAuthBossParam() *authboss.Authboss {
 
 	ab.Config.Paths.RootURL = "http://" + host + ":" + port
 	ab.Config.Storage.Server = database
-	// ab.Config.Storage.SessionState = sessionStore
-	// ab.Config.Storage.CookieState = cookieStore
+	ab.Config.Storage.SessionState = sessionStore
+	ab.Config.Storage.CookieState = cookieStore
 	ab.Config.Paths.Mount = "/auth"
 
 	// Default to API usage
